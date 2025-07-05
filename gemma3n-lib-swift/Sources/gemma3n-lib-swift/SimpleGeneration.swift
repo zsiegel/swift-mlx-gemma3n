@@ -14,6 +14,12 @@ public class SimpleGeneration {
         self.tokenizer = tokenizer
     }
     
+    /// Token generation result containing the token ID and decoded text
+    public struct TokenResult: Sendable {
+        public let tokenId: Int
+        public let text: String
+    }
+    
     /// Create KV caches for all model layers matching Python's make_cache() implementation
     private func createCaches() -> [KVCache] {
         var caches: [KVCache] = []
@@ -269,5 +275,57 @@ public class SimpleGeneration {
         }
     }
     
+    /// Generate a response with streaming using a callback for each token
+    public func generateStreaming(
+        prompt: String,
+        maxTokens: Int = 50,
+        temperature: Float = 0.0,
+        verbose: Bool = false,
+        onToken: @escaping @Sendable (TokenResult) -> Void
+    ) -> String {
+        autoreleasepool {
+            var caches = [KVCache]()
+            
+            // Format the prompt with chat template
+            let formattedPrompt = formatPrompt(prompt)
+            
+            // Tokenize the prompt
+            var tokenIds = tokenizer.encode(formattedPrompt, addSpecialTokens: false)
+            var generatedTokenIds: [Int] = []
+            
+            // Generation loop
+            for _ in 0..<maxTokens {
+                // Generate next token with cache
+                let nextToken = generateNextTokenWithCache(
+                    inputIds: tokenIds,
+                    caches: &caches,
+                    temperature: temperature,
+                    verbose: verbose
+                )
+                
+                // Add to sequences
+                tokenIds.append(nextToken)
+                generatedTokenIds.append(nextToken)
+                
+                // Decode just the new token
+                let tokenText = tokenizer.decode(tokens: [nextToken], skipSpecialTokens: false)
+                
+                // Call the callback with the new token
+                onToken(TokenResult(tokenId: nextToken, text: tokenText))
+                
+                // Check for EOS tokens
+                if nextToken == Gemma3nTokenizer.eosTokenId || 
+                   nextToken == Gemma3nTokenizer.alternateEosTokenId {
+                    break
+                }
+            }
+            
+            // Decode the full generated sequence
+            let generatedText = tokenizer.decode(tokens: generatedTokenIds, skipSpecialTokens: false)
+            
+            // Remove any trailing end_of_turn token
+            return generatedText.replacingOccurrences(of: "<end_of_turn>", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+    }
     
 }

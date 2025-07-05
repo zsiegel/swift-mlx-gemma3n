@@ -5,9 +5,8 @@ public class DebugLayers {
     // Use private storage with thread-safe accessors
     private static let queue = DispatchQueue(label: "debuglayers.queue")
     
-    // Private storage - default to layers 0-25
-    nonisolated(unsafe) private static var _startLayer: Int = 0
-    nonisolated(unsafe) private static var _endLayer: Int = 25
+    nonisolated(unsafe) private static var _startLayer: Int = -1
+    nonisolated(unsafe) private static var _endLayer: Int = -1
     nonisolated(unsafe) private static var _startPass: Int = 1
     nonisolated(unsafe) private static var _endPass: Int = 1
     nonisolated(unsafe) private static var _currentPass: Int = 1
@@ -44,6 +43,7 @@ public class DebugLayers {
     
     /// Check if a layer should be debugged
     public static func shouldDebug(layer: Int) -> Bool {
+        return false
         return queue.sync {
             let layerInRange = layer >= _startLayer && layer <= _endLayer
             let passInRange = _currentPass >= _startPass && _currentPass <= _endPass

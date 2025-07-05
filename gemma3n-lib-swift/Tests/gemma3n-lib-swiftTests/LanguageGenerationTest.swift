@@ -9,9 +9,11 @@ struct LanguageGenerationTest {
     
     // Use a fully qualified path to the model directory
     private var modelPath: String {
-        return "/Users/zsiegel/src/gitlab.com/mlx-gemma3n/gemma3n-lib-swift/models/gemma-3n-E2B-it-bf16"
+        return "/Users/zsiegel/src/gitlab.com/mlx-gemma3n/gemma3n-lib-swift/models/gemma-3n-E4B-it-bf16"
     }
     
+    private let maxTokens: Int = 25_000
+
     @Test("Run generation matching Python mlx_vlm")
     func testPythonCompatibleGeneration() async throws {
         print("\n=== SWIFT MLX GENERATION TEST ===")
@@ -40,7 +42,8 @@ struct LanguageGenerationTest {
             print("Model config: hidden_size=\(config.hiddenSize), num_layers=\(config.numHiddenLayers)")
             
             // Match Python prompt setup exactly
-            let userPrompt = "What is the capital of France?"
+            let userPrompt = "Give me a brief summary of how the drug Gleevec works, when it was created and who made it?"
+            // let userPrompt = "What is the capital of France?"
             print("\n" + String(repeating: "═", count: 10))
             print("User prompt: \"\(userPrompt)\"")
             
@@ -63,36 +66,60 @@ struct LanguageGenerationTest {
             print("\n" + String(repeating: "═", count: 60))
             print("Generating with parameters:")
             print("  - temperature: 0.7")
-            print("  - max_tokens: 100")
-            print("  - Using KV cache (matching mlx_vlm)")
+            print("  - max_tokens: \(maxTokens)")
+            print("  - Using KV cache with streaming")
             print(String(repeating: "═", count: 60))
             
-            let response = generator.generateWithCache(
+            print("\nStreaming output:")
+            
+            // Use a class to hold mutable state for the @Sendable closure
+            final class TokenStorage: @unchecked Sendable {
+                var tokens: [Int] = []
+                private let lock = NSLock()
+                
+                func append(_ token: Int) {
+                    lock.lock()
+                    defer { lock.unlock() }
+                    tokens.append(token)
+                }
+                
+                func getTokens() -> [Int] {
+                    lock.lock()
+                    defer { lock.unlock() }
+                    return tokens
+                }
+            }
+            
+            let tokenStorage = TokenStorage()
+            
+            let response = generator.generateStreaming(
                 prompt: userPrompt,
-                maxTokens: 1000,
+                maxTokens: maxTokens,
                 temperature: 0.7,
                 verbose: true
-            )
+            ) { token in
+                print(token.text, terminator: "")
+                fflush(stdout) // Ensure immediate output
+                
+                // Thread-safe token collection
+                tokenStorage.append(token.tokenId)
+            }
             
-            print("\n=== FINAL SWIFT MLX GENERATION RESULT ===")
-            print("Generated response: \"\(response)\"")
+            print("\n\n=== FINAL SWIFT MLX GENERATION RESULT ===")
+            // print("Generated response: \"\(response)\"")
             
-            // Tokenize the generated response to see token IDs
-            let fullOutput = formattedPrompt + response
-            let fullTokenIds = tokenizer.encode(fullOutput, addSpecialTokens: false)
-            let generatedTokenIds = Array(fullTokenIds.dropFirst(tokenIds.count))
-            
-            print("\nGenerated token IDs: \(generatedTokenIds)")
-            print("Number of generated tokens: \(generatedTokenIds.count)")
+            let collectedTokens = tokenStorage.getTokens()
+            // print("\nGenerated token IDs (from streaming): \(collectedTokens)")
+            print("Number of generated tokens: \(collectedTokens.count)")
             
             // Show token mapping for generated text
-            print("\n" + String(repeating: "=", count: 50))
-            print("GENERATED TOKEN MAPPING")
-            print(String(repeating: "=", count: 50))
-            for (i, tokenId) in generatedTokenIds.enumerated() {
-                let tokenStr = tokenizer.decode(tokens: [tokenId], skipSpecialTokens: false)
-                print("  [\(i)] ID: \(String(format: "%6d", tokenId)) -> '\(tokenStr)'")
-            }
+            // print("\n" + String(repeating: "=", count: 50))
+            // print("GENERATED TOKEN MAPPING (from streaming)")
+            // print(String(repeating: "=", count: 50))
+            // for (i, tokenId) in collectedTokens.enumerated() {
+            //     let tokenStr = tokenizer.decode(tokens: [tokenId], skipSpecialTokens: false)
+            //     print("  [\(i)] ID: \(String(format: "%6d", tokenId)) -> '\(tokenStr)'")
+            // }
             
             print("\n=== END OF PYTHON-COMPATIBLE GENERATION TEST ===")
         }

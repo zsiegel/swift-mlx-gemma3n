@@ -226,19 +226,19 @@ public class Gemma3nModel: Module {
         let positionEmbeddingsLocal = ropeEmbeddingLocal(h0, positionIds: positionIds)
         
         // Debug RoPE embeddings
-        if passNumber == 1 {
-            print("\n[RoPE Debug]")
-            print("  Cache position: \(cachePosition)")
-            print("  Position IDs shape: \(positionIds.shape)")
-            print("  Position IDs: \(positionIds)")
-            print("  Global RoPE base: \(config.ropeTheta)")
-            print("  Local RoPE base: \(config.ropeLocalBaseFreq)")
-            print("  Global RoPE cos shape: \(positionEmbeddingsGlobal.0.shape)")
-            print("  Global RoPE cos first 5: \(positionEmbeddingsGlobal.0[0, 0, 0..<5])")
-            print("  Global RoPE sin first 5: \(positionEmbeddingsGlobal.1[0, 0, 0..<5])")
-            print("  Local RoPE cos first 5: \(positionEmbeddingsLocal.0[0, 0, 0..<5])")
-            print("  Local RoPE sin first 5: \(positionEmbeddingsLocal.1[0, 0, 0..<5])")
-        }
+        // if passNumber == 1 {
+        //     print("\n[RoPE Debug]")
+        //     print("  Cache position: \(cachePosition)")
+        //     print("  Position IDs shape: \(positionIds.shape)")
+        //     print("  Position IDs: \(positionIds)")
+        //     print("  Global RoPE base: \(config.ropeTheta)")
+        //     print("  Local RoPE base: \(config.ropeLocalBaseFreq)")
+        //     print("  Global RoPE cos shape: \(positionEmbeddingsGlobal.0.shape)")
+        //     print("  Global RoPE cos first 5: \(positionEmbeddingsGlobal.0[0, 0, 0..<5])")
+        //     print("  Global RoPE sin first 5: \(positionEmbeddingsGlobal.1[0, 0, 0..<5])")
+        //     print("  Local RoPE cos first 5: \(positionEmbeddingsLocal.0[0, 0, 0..<5])")
+        //     print("  Local RoPE sin first 5: \(positionEmbeddingsLocal.1[0, 0, 0..<5])")
+        // }
         let targetMagnitude = MLX.mean(MLX.pow(h0, 2), axes: [-1], keepDims: true).sqrt()
         // Match Python's mx.finfo(h0.dtype).min exactly
         // This is the most negative value for the dtype
@@ -378,22 +378,22 @@ public class Gemma3nModel: Module {
         // Average all streams
         let hFinal = MLX.mean(MLX.stacked(hListFinal, axis: 0), axis: 0)
         
-        if passNumber == 1 {
-            print("  hFinal (after averaging) first 5 positions first 5 values:")
-            for pos in 0..<min(5, hFinal.shape[1]) {
-                print("    Pos \(pos): \(hFinal[0, pos, 0..<5])")
-            }
-        }
+        // if passNumber == 1 {
+        //     print("  hFinal (after averaging) first 5 positions first 5 values:")
+        //     for pos in 0..<min(5, hFinal.shape[1]) {
+        //         print("    Pos \(pos): \(hFinal[0, pos, 0..<5])")
+        //     }
+        // }
         
         // Apply final normalization
         let output = norm(hFinal)
         
-        if passNumber == 1 {
-            print("  Final normalized output first 5 positions first 5 values:")
-            for pos in 0..<min(5, output.shape[1]) {
-                print("    Pos \(pos): \(output[0, pos, 0..<5])")
-            }
-        }
+        // if passNumber == 1 {
+        //     print("  Final normalized output first 5 positions first 5 values:")
+        //     for pos in 0..<min(5, output.shape[1]) {
+        //         print("    Pos \(pos): \(output[0, pos, 0..<5])")
+        //     }
+        // }
         
         // print("=== OUTPUT PASS \(self.passNumber) ===")
         // print("output shape: \(output.shape)")
