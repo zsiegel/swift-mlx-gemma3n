@@ -10,6 +10,8 @@ A swift-mlx port of Gemma3n. This was hacked together over a few days of work an
 
 ## Notes
 
+- I had on idea people were already hacking on this is mlx-swift-examples when I started this
+  - this was really just a fun side project I wanted to attempt myself for putting into a small MacOS app I am building
 - This was tested primarily on Mac OS Tahoe 26.0 (Beta)
   - This means its using the newer Swift toolchain but should be easy to set back to pre-beta toolchain
 - Update the path to your models in `LanguageGenerationTest.swift` before running the generation script
